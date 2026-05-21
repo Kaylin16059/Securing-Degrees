@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="back-link" href="{{ url_for('districts') }}{% if state %}?state={{ state }}{% endif %}">← Back to Districts</a>
+
+<!-- HEADER -->
+<div class="panel">
+  <div class="school-header">
+    <div>
+      <h2>{{ district_name }}</h2>
+      <div class="subtext" style="margin-top:4px">{{ state }} · {{ stats["school_count"] }} schools</div>
+    </div>
+    <a class="btn btn-teal" href="{{ url_for('export_district_csv', district_name=district_name) }}{% if state %}?state={{ state }}{% endif %}" style="font-size:13px;padding:8px 16px">
+      ↓ Export District CSV
+    </a>
+  </div>
+
+  <!-- STAT CARDS -->
+  <div class="cards" style="margin-top:18px;margin-bottom:0">
+    <div class="card">
+      <h2>{{ stats["school_count"] }}</h2>
+      <p>Total Schools</p>
+    </div>
+    <div class="card teal">
+      <h2>{{ "{:,}".format(stats["total_enrollment"]) if stats["total_enrollment"] else "—" }}</h2>
+      <p>Total Enrollment</p>
+    </div>
+    <div class="card">
+      <h2>{{ stats["avg_score"] or "—" }}</h2>
+      <p>Avg Priority Score</p>
+    </div>
+    <div class="card">
+      <h2 style="color:var(--gold)">{{ stats["high_count"] }}</h2>
+      <p>High Priority Schools</p>
+    </div>
+    <div class="card teal">
+      <h2>{{ stats["active_count"] }}</h2>
+      <p>Active Outreach</p>
+    </div>
+    <div class="card">
+      <h2 style="color:#16a34a">{{ stats["partnered_count"] }}</h2>
+      <p>Partnered</p>
+    </div>
+  </div>
+</div>
+
+<!-- STAGE BREAKDOWN -->
+<div class="panel">
+  <h2>Pipeline Breakdown</h2>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    {% for s in stage_breakdown %}
+    {% set stage_class = {
+      "Prospecting": "badge-prospecting",
+      "Contacted": "badge-contacted",
+      "Meeting Set": "badge-meeting",
+      "Follow Up": "badge-followup",
+      "Partnered": "badge-partnered",
+      "Not Interested": "badge-notinterested"
+    }.get(s["pipeline_stage"], "badge-default") %}
+    <div class="pip-stat">
+      <span class="badge {{ stage_class }}">{{ s["pipeline_stage"] }}</span>
+      <strong style="color:var(--text)">{{ s["cnt"] }}</strong>
+      <span style="color:var(--text-dim);font-size:12px">school{{ 's' if s['cnt'] != 1 }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- SCHOOLS IN DISTRICT -->
+<div class="panel">
+  <h2>Schools in this District</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>School</th>
+          <th>City</th>
+          <th>Level</th>
+          <th>Enrollment</th>
+          <th>Score</th>
+          <th>Stage</th>
+          <th>Priority</th>
+          <th>Contacts</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for school in schools %}
+        {% set stage_class = {
+          "Prospecting": "badge-prospecting",
+          "Contacted": "badge-contacted",
+          "Meeting Set": "badge-meeting",
+          "Follow Up": "badge-followup",
+          "Partnered": "badge-partnered",
+          "Not Interested": "badge-notinterested"
+        }.get(school["pipeline_stage"], "badge-default") %}
+        {% set pri_class = {
+          "High": "badge-high",
+          "Medium": "badge-medium",
+          "Low": "badge-low"
+        }.get(school["priority"], "badge-default") %}
+        <tr>
+          <td style="color:var(--text-dim);font-size:13px">{{ school["rank"] or "—" }}</td>
+          <td><a href="{{ url_for('school_detail', school_id=school['id']) }}">{{ school["school_name"] }}</a></td>
+          <td>{{ school["city"] }}</td>
+          <td>{{ school["level"] or "—" }}</td>
+          <td>{{ school["enrollment"] or "—" }}</td>
+          <td>
+            {% if school["priority_score"] %}
+            <div class="score-bar-wrap">
+              <div class="score-bar"><div class="score-fill" style="width:{{ school['priority_score'] }}%"></div></div>
+              <span style="font-size:13px">{{ school["priority_score"] }}</span>
+            </div>
+            {% else %}—{% endif %}
+          </td>
+          <td><span class="badge {{ stage_class }}">{{ school["pipeline_stage"] or "—" }}</span></td>
+          <td><span class="badge {{ pri_class }}">{{ school["priority"] or "—" }}</span></td>
+          <td style="color:var(--text-dim);font-size:13px">
+            {# Count contacts for this school inline via loop - lightweight #}
+            <a href="{{ url_for('school_detail', school_id=school['id']) }}#contacts" style="color:var(--teal)">View →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

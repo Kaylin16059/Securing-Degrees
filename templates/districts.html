@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- FILTERS -->
+<div class="panel">
+  <h2>Districts & Networks</h2>
+  <form method="GET" class="filter-form">
+    <input type="text" name="search" placeholder="Search district or network name…" value="{{ search }}" style="min-width:260px;flex:2">
+
+    <select name="state">
+      <option value="">All States</option>
+      {% for row in states %}
+      <option value="{{ row['state'] }}" {% if selected_state == row['state'] %}selected{% endif %}>{{ row["state"] }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="stage">
+      <option value="">All Pipeline Stages</option>
+      {% for row in pipeline_stages %}
+      <option value="{{ row['pipeline_stage'] }}" {% if selected_stage == row['pipeline_stage'] %}selected{% endif %}>{{ row["pipeline_stage"] }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit">Apply</button>
+    <a class="clear-link" href="{{ url_for('districts') }}">Clear</a>
+  </form>
+</div>
+
+<!-- DISTRICT TABLE -->
+<div class="panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <p class="result-count" style="margin:0">{{ filtered_total }} districts / networks</p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>District / Network</th>
+          <th>State</th>
+          <th>Schools</th>
+          <th>Total Enrollment</th>
+          <th>Avg Score</th>
+          <th>High Priority</th>
+          <th>Active Outreach</th>
+          <th>Partnered</th>
+          <th>Dominant Stage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in districts %}
+        {% set stage_class = {
+          "Prospecting": "badge-prospecting",
+          "Contacted": "badge-contacted",
+          "Meeting Set": "badge-meeting",
+          "Follow Up": "badge-followup",
+          "Partnered": "badge-partnered",
+          "Not Interested": "badge-notinterested"
+        }.get(d["dominant_stage"], "badge-default") %}
+        <tr>
+          <td>
+            <a href="{{ url_for('district_detail', district_name=d['district_name']) }}?state={{ d['state'] }}">
+              {{ d["district_name"] }}
+            </a>
+          </td>
+          <td>{{ d["state"] }}</td>
+          <td style="font-weight:700;color:var(--teal)">{{ d["school_count"] }}</td>
+          <td>{{ "{:,}".format(d["total_enrollment"]) if d["total_enrollment"] else "—" }}</td>
+          <td>
+            {% if d["avg_priority_score"] %}
+            <div class="score-bar-wrap">
+              <div class="score-bar"><div class="score-fill" style="width:{{ d['avg_priority_score'] }}%"></div></div>
+              <span style="font-size:13px">{{ d["avg_priority_score"] }}</span>
+            </div>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if d["high_count"] > 0 %}
+            <span class="badge badge-high">{{ d["high_count"] }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if d["active_count"] > 0 %}
+            <span style="color:var(--teal);font-weight:700">{{ d["active_count"] }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if d["partnered_count"] > 0 %}
+            <span class="badge badge-partnered">{{ d["partnered_count"] }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td><span class="badge {{ stage_class }}">{{ d["dominant_stage"] or "—" }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PAGINATION -->
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    {% if page > 1 %}<a href="?{{ query_string }}&page={{ page - 1 }}">← Prev</a>
+    {% else %}<span class="disabled">← Prev</span>{% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+      {% if p == page %}<span class="current">{{ p }}</span>
+      {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+      <a href="?{{ query_string }}&page={{ p }}">{{ p }}</a>
+      {% elif p == 4 or p == total_pages - 3 %}<span>…</span>
+      {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}<a href="?{{ query_string }}&page={{ page + 1 }}">Next →</a>
+    {% else %}<span class="disabled">Next →</span>{% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
