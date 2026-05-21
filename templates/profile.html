@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+
+<div style="max-width:520px">
+  <div class="panel">
+    <h2>My Profile</h2>
+    {% if error %}
+    <div class="flash flash-danger" style="margin-bottom:16px">{{ error }}</div>
+    {% endif %}
+    <form method="POST" class="stack-form form-lg">
+      <div class="form-group">
+        <label>Display Name</label>
+        <input type="text" name="display_name" value="{{ user['display_name'] or '' }}">
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:6px">
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">Change password (leave blank to keep current)</p>
+        <div class="form-group">
+          <label>Current Password</label>
+          <input type="password" name="current_password" autocomplete="current-password">
+        </div>
+        <div class="form-group">
+          <label>New Password</label>
+          <input type="password" name="new_password" autocomplete="new-password" placeholder="Min. 6 characters">
+        </div>
+      </div>
+      <button type="submit">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

@@ -3,21 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>School Partnership Dashboard — Securing Degrees</title>
+  <title>{% block title %}MKM Projects{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <nav class="navbar">
     <div class="navbar-brand">
-      <h1>School Partnership <span>Dashboard</span></h1>
-      <p>Securing Degrees · Charter outreach tracker — TX, NC, SC, GA</p>
+      <h1><span class="mkm-m1">M</span><span class="mkm-k">K</span><span class="mkm-m2">M</span> <span class="mkm-projects">Projects</span></h1>
     </div>
-    <div style="display:flex;gap:10px">
-      <a href="{{ url_for('index') }}" class="home-link">Schools</a>
-      <a href="{{ url_for('districts') }}" class="home-link" style="background:var(--teal)">Districts</a>
-      <a href="{{ url_for('import_contacts') }}" class="home-link" style="background:var(--navy-light)">↑ Import Contacts</a>
+    <div class="nav-links">
+      <a href="{{ url_for('index') }}"      class="nav-link">All Tickets</a>
+      <a href="{{ url_for('dashboard') }}"  class="nav-link navy">Dashboard</a>
+      <a href="{{ url_for('categories') }}" class="nav-link magenta">Categories</a>
+      <a href="{{ url_for('assignees') }}"  class="nav-link" style="background:var(--navy-light)">Assignees</a>
+      {% if current_user.role == 'admin' %}
+      <a href="{{ url_for('manage_users') }}" class="nav-link" style="background:#5b3fa0">Users</a>
+      {% endif %}
+      <a href="{{ url_for('new_ticket') }}"  class="nav-link" style="background:var(--yellow);color:var(--navy)">+ New Ticket</a>
+      <!-- User menu (click to open/close) -->
+      <div class="user-menu" id="user-menu">
+        <button class="user-avatar" id="user-menu-btn" aria-haspopup="true" aria-expanded="false" onclick="toggleUserMenu(event)">
+          {{ current_user.display_name[0].upper() }}
+        </button>
+        <div class="user-dropdown" id="user-dropdown">
+          <div class="user-info">
+            <strong>{{ current_user.display_name }}</strong>
+            <span>{{ current_user.role }}</span>
+          </div>
+          <a href="{{ url_for('profile') }}">My Profile</a>
+          <a href="{{ url_for('logout') }}" class="logout-link">Log Out</a>
+        </div>
+      </div>
+
+      <script>
+        function toggleUserMenu(e) {
+          e.stopPropagation();
+          var btn      = document.getElementById('user-menu-btn');
+          var dropdown = document.getElementById('user-dropdown');
+          var open     = dropdown.classList.toggle('open');
+          btn.setAttribute('aria-expanded', open);
+        }
+        // Close when clicking anywhere else on the page
+        document.addEventListener('click', function(e) {
+          var menu = document.getElementById('user-menu');
+          if (menu && !menu.contains(e.target)) {
+            document.getElementById('user-dropdown').classList.remove('open');
+            document.getElementById('user-menu-btn').setAttribute('aria-expanded', 'false');
+          }
+        });
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            document.getElementById('user-dropdown').classList.remove('open');
+            document.getElementById('user-menu-btn').setAttribute('aria-expanded', 'false');
+          }
+        });
+      </script>
     </div>
   </nav>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-wrap">
+    {% for cat, msg in messages %}
+    <div class="flash flash-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
   <main class="container">
     {% block content %}{% endblock %}
   </main>

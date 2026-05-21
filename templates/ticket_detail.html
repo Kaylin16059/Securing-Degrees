@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% block title %}#{{ '%03d'|format(ticket['id']) }} — {{ ticket['subject'] }}{% endblock %}
+{% block content %}
+
+<a href="{{ url_for('index') }}" class="back-link">← Back to Tickets</a>
+
+<!-- TICKET HEADER -->
+<div class="panel">
+  <div class="ticket-header">
+    <div>
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">
+        Ticket #{{ '%03d'|format(ticket['id']) }}
+      </p>
+      <h2>{{ ticket['subject'] }}</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
+        <span class="badge {{ status_badge(ticket['status']) }}">{{ ticket['status'] }}</span>
+        <span class="badge {{ priority_badge(ticket['priority']) }}">{{ ticket['priority'] }} priority</span>
+        {% if ticket['cat_name'] %}
+        <span class="cat-badge {{ ticket['cat_color'] }}">{{ ticket['cat_name'] }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;align-items:flex-start">
+      <a href="{{ url_for('edit_ticket', ticket_id=ticket['id']) }}" class="btn btn-ghost btn-sm">Edit Ticket</a>
+      <form method="POST" action="{{ url_for('delete_ticket', ticket_id=ticket['id']) }}"
+            onsubmit="return confirm('Permanently delete ticket #{{ '%03d'|format(ticket['id']) }}? This cannot be undone.')">
+        <button type="submit" class="btn btn-danger btn-sm">Delete Ticket</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="details-grid">
+    <div class="detail-item">
+      <div class="label">Assignee</div>
+      <div class="value">{{ ticket['assignee'] or 'Unassigned' }}</div>
+    </div>
+    <div class="detail-item">
+      <div class="label">Category</div>
+      <div class="value">
+        {% if ticket['cat_name'] %}
+        <span class="cat-badge {{ ticket['cat_color'] }}">{{ ticket['cat_name'] }}</span>
+        {% else %}—{% endif %}
+      </div>
+    </div>
+    <div class="detail-item">
+      <div class="label">Created</div>
+      <div class="value">{{ ticket['created_at'][:10] }}</div>
+    </div>
+    <div class="detail-item">
+      <div class="label">Last Updated</div>
+      <div class="value">{{ ticket['updated_at'][:10] }}</div>
+    </div>
+  </div>
+
+  {% if ticket['description'] %}
+  <div style="margin-top:16px;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:0 10px 10px 0">
+    <p style="font-size:13px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Description</p>
+    <p style="font-size:14px;color:var(--text-mid);line-height:1.7">{{ ticket['description'] }}</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="two-column">
+  <!-- NOTES -->
+  <div>
+    <div class="panel">
+      <h2>Notes &amp; Updates ({{ notes|length }})</h2>
+
+      <!-- TOTAL TIME BOX -->
+      {% set total_time = ticket['total_time_spent'] or 0 %}
+      {% if total_time > 0 %}
+      <div class="time-total-box">
+        <div>
+          <div class="tt-label">Total time logged</div>
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <span class="tt-value">{{ '%.1f'|format(total_time) }}</span>
+            <span class="tt-unit">hour{% if total_time != 1 %}s{% endif %}</span>
+          </div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="font-size:12px;color:var(--text-dim)">
+          across {{ notes|selectattr('time_spent')|list|length }} note{% if notes|selectattr('time_spent')|list|length != 1 %}s{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- NOTE LIST -->
+      {% for note in notes %}
+      <div class="note-item">
+        <div class="note-meta">
+          <strong>{{ note['author'] }}</strong>
+          <div style="display:flex;align-items:center;gap:8px">
+            {% if note['time_spent'] %}
+            <span class="time-badge">⏱ {{ '%.1f'|format(note['time_spent']) }}h</span>
+            {% endif %}
+            <span>{{ note['created_at'][:16] }}</span>
+          </div>
+        </div>
+        <div class="note-text">{{ note['note'] }}</div>
+      </div>
+      {% else %}
+      <p style="color:var(--text-dim);font-size:14px">No notes yet. Add the first update below.</p>
+      {% endfor %}
+
+      <!-- ADD NOTE FORM -->
+      <form method="POST" action="{{ url_for('add_note', ticket_id=ticket['id']) }}" class="stack-form" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+        <label>Add a note</label>
+        <textarea name="note" placeholder="Describe the update, action taken, or next step…" required></textarea>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Your name</label>
+            <input type="text" name="author" placeholder="Your name" value="{{ current_user.display_name }}">
+          </div>
+          <div class="form-group">
+            <label>Time spent (hours)</label>
+            <div class="time-input-wrap">
+              <input type="number" name="time_spent" placeholder="e.g. 1.5" min="0" step="0.25">
+              <span>hrs on this update</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Update status to</label>
+          <select name="status">
+            <option value="">— No change —</option>
+            {% for s in ['Open','In Progress','Resolved','Closed'] %}
+            <option value="{{ s }}" {% if ticket['status'] == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit">Add Note</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div>
+
+    <!-- ATTACHMENTS -->
+    <div class="panel">
+      <h2>Attachments ({{ attachments|length }})</h2>
+
+      <!-- IMAGE PREVIEWS -->
+      {% set images = attachments | selectattr('mimetype') | list %}
+      {% if images %}
+      <div class="attachment-grid">
+        {% for att in attachments %}
+        {% if is_image(att['mimetype']) %}
+        <div class="attachment-img-wrap">
+          <a href="{{ url_for('download_attachment', att_id=att['id']) }}" target="_blank">
+            <img src="{{ url_for('download_attachment', att_id=att['id']) }}"
+                 alt="{{ att['original_name'] }}" class="attachment-preview">
+          </a>
+          <div class="attachment-img-name">{{ att['original_name'] }}</div>
+          <form method="POST" action="{{ url_for('delete_attachment', att_id=att['id']) }}"
+                onsubmit="return confirm('Delete this file?')" style="margin-top:4px">
+            <button type="submit" class="btn btn-danger btn-sm" style="width:100%;justify-content:center;font-size:11px;padding:4px">Remove</button>
+          </form>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- FILE LIST (non-image attachments) -->
+      {% set non_images = [] %}
+      {% for att in attachments %}
+        {% if not is_image(att['mimetype']) %}
+          {% set _ = non_images.append(att) %}
+        {% endif %}
+      {% endfor %}
+
+      {% if non_images %}
+      <div style="margin-top:{% if images %}12px{% else %}0{% endif %}">
+        {% for att in non_images %}
+        <div class="attachment-file-row">
+          <span class="attachment-icon">{{ att['original_name'].rsplit('.',1)[1].upper() if '.' in att['original_name'] else '?' }}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ att['original_name'] }}</div>
+            <div style="font-size:11px;color:var(--text-dim)">{{ (att['size_bytes'] / 1024)|round(1) }} KB · {{ att['uploaded_by'] }} · {{ att['uploaded_at'][:10] }}</div>
+          </div>
+          <a href="{{ url_for('download_attachment', att_id=att['id']) }}"
+             class="btn btn-ghost btn-sm">↓ Download</a>
+          <form method="POST" action="{{ url_for('delete_attachment', att_id=att['id']) }}"
+                onsubmit="return confirm('Delete this file?')">
+            <button type="submit" class="btn btn-danger btn-sm">✕</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if not attachments %}
+      <p style="color:var(--text-dim);font-size:14px;margin-bottom:12px">No attachments yet.</p>
+      {% endif %}
+
+      <!-- UPLOAD FORM -->
+      <form method="POST" action="{{ url_for('upload_attachment', ticket_id=ticket['id']) }}"
+            enctype="multipart/form-data"
+            style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px"
+            id="upload-form">
+        <label style="display:block;margin-bottom:8px">Upload files</label>
+        <div class="upload-dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+          <div class="upload-icon">📎</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text-mid)">Click to browse or drag &amp; drop</div>
+          <div style="font-size:12px;color:var(--text-dim);margin-top:4px">Images, PDFs, Word, Excel, ZIP — max 16 MB each</div>
+          <div id="file-names" style="font-size:12px;color:var(--cyan-dim);margin-top:8px;font-weight:600"></div>
+        </div>
+        <input type="file" name="files" id="file-input" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.tar,.gz" style="display:none">
+        <button type="submit" id="upload-btn" class="btn btn-navy" style="margin-top:10px;display:none">
+          ↑ Upload Selected Files
+        </button>
+      </form>
+    </div>
+
+    <!-- QUICK EDIT -->
+    <div class="panel">
+      <h2>Quick Edit</h2>
+      <form method="POST" action="{{ url_for('edit_ticket', ticket_id=ticket['id']) }}" class="stack-form">
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status">
+            {% for s in ['Open','In Progress','Resolved','Closed'] %}
+            <option value="{{ s }}" {% if ticket['status'] == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select name="priority">
+            {% for p in ['High','Medium','Low'] %}
+            <option value="{{ p }}" {% if ticket['priority'] == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Assignee</label>
+          <select name="assignee">
+            <option value="Unassigned">— Unassigned —</option>
+            {% for a in assignees %}
+            <option value="{{ a['name'] }}" {% if ticket['assignee'] == a['name'] %}selected{% endif %}>{{ a['name'] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select name="category_id">
+            <option value="">— None —</option>
+            {% for cat in categories %}
+            <option value="{{ cat['id'] }}" {% if ticket['category_id'] == cat['id'] %}selected{% endif %}>{{ cat['name'] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <input type="hidden" name="subject" value="{{ ticket['subject'] }}">
+        <input type="hidden" name="description" value="{{ ticket['description'] or '' }}">
+        <button type="submit" class="btn-navy">Save Changes</button>
+      </form>
+    </div>
+
+  </div><!-- end right column -->
+</div>
+
+<script>
+// Drag-and-drop + file picker
+const dropzone  = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+const fileNames = document.getElementById('file-names');
+const uploadBtn = document.getElementById('upload-btn');
+
+function showFiles(files) {
+  if (files.length === 0) { fileNames.textContent = ''; uploadBtn.style.display='none'; return; }
+  fileNames.textContent = Array.from(files).map(f => f.name).join(', ');
+  uploadBtn.style.display = 'inline-flex';
+}
+
+fileInput.addEventListener('change', () => showFiles(fileInput.files));
+
+dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  fileInput.files = e.dataTransfer.files;
+  showFiles(e.dataTransfer.files);
+});
+</script>
+
+{% endblock %}

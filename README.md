@@ -1,70 +1,93 @@
-# School Partnership Dashboard — Securing Degrees
+# HelpDesk — IT Ticketing System
 
-Internal dashboard for tracking charter school outreach across TX, NC, SC, and GA.
+A Flask-based ticketing system styled after the Securing Degrees dashboard.
+Navy + teal navbar, CMYK accent colors (cyan, magenta, yellow), clean panels, and inline bar charts.
 
----
+## File Structure
 
-## Running Locally
+```
+helpdesk_flask/
+├── app.py                      ← Flask routes and logic
+├── requirements.txt            ← Python dependencies (flask only)
+├── Procfile                    ← For Railway / Heroku
+├── railway.json                ← Railway deployment config
+├── nixpacks.toml               ← Nixpacks build config
+├── data/
+│   └── helpdesk.sqlite         ← SQLite database (auto-created on first run)
+├── static/
+│   └── style.css               ← All styles — CMYK design system
+└── templates/
+    ├── base.html               ← Shared navbar + layout
+    ├── index.html              ← Ticket list with filters
+    ├── ticket_detail.html      ← Ticket detail + notes
+    ├── new_ticket.html         ← Create ticket form
+    ├── edit_ticket.html        ← Edit ticket form
+    ├── dashboard.html          ← Bar chart analytics
+    └── categories.html         ← Manage categories
+```
+
+## Run Locally
 
 ```bash
-pip install flask gunicorn
+# 1. Install Python 3.10+
+
+# 2. Install Flask
+pip install flask
+
+# 3. Run the app
 python app.py
+
+# 4. Open in browser
+http://localhost:5000
 ```
-Open http://127.0.0.1:5000
+
+No other dependencies — SQLite is built into Python.
 
 ---
 
-## Deploying to Railway
+## Deploy to Railway (recommended — free tier available)
 
-### Option A — Deploy via GitHub (recommended)
+1. Go to https://railway.app and sign up
+2. Click **New Project → Deploy from GitHub repo**
+3. Push this folder to a GitHub repo, connect it
+4. Railway auto-detects Python via nixpacks — no config needed
+5. Your app is live at a `*.railway.app` URL in ~60 seconds
 
-1. Push this folder to a GitHub repo (can be private)
-2. Go to https://railway.app and log in
-3. Click **New Project → Deploy from GitHub repo**
-4. Select your repo — Railway will auto-detect Python and build it
-5. Once deployed, click **Settings → Generate Domain** to get a public URL
+Optional: add env vars `HELPDESK_USER` and `HELPDESK_PASS` in the Railway Variables tab to password-protect the app.
 
-That's it. Railway reads the `Procfile` and `railway.json` automatically.
+## Deploy to Render (free tier)
 
-### Option B — Deploy via Railway CLI
+1. Go to https://render.com → New Web Service
+2. Connect your GitHub repo
+3. Build command: `pip install -r requirements.txt`
+4. Start command: `python app.py`
+5. Done
+
+## Deploy to Heroku
 
 ```bash
-# Install Railway CLI
-npm install -g @railway/cli
-
-# Login
-railway login
-
-# From inside this folder:
-railway init        # creates a new project
-railway up          # deploys the app
-railway domain      # generates a public URL
+heroku create my-helpdesk
+git push heroku main
+heroku open
 ```
-
-### Environment Variables
-
-No required env variables. Railway injects `PORT` automatically and the app reads it.
-
-If you want to lock the dashboard to internal use only, you can add HTTP Basic Auth
-by setting these in Railway's Variables tab:
-- `DASHBOARD_USER` — username
-- `DASHBOARD_PASS` — password
-
-Then add the auth middleware below to app.py (optional, see note in app.py).
 
 ---
 
-## What's Inside
+## Customizing Colors
 
-- **1,556 schools** (1,469 charter + 87 district/network orgs) across TX, NC, SC, GA
-- **2,071 contacts** loaded from the Securing Degrees contact list
-- **Priority scores & ranks** from the ranked charter school list
-- **Enrollment data** from NCES CCD 2024-25
+All CMYK colors are CSS variables at the top of `static/style.css`:
 
-## Pipeline Stages
-Prospecting → Contacted → Meeting Set → Follow Up → Partnered / Not Interested
+```css
+--cyan:    #00B4C8;
+--magenta: #E0007A;
+--yellow:  #F5C800;
+```
 
-## Updating Data
-Replace `data/school_partnership_dashboard.sqlite` with a new version and redeploy.
-For Railway, push the updated file to GitHub and Railway will redeploy automatically.
+Change any of these to instantly retheme the entire app.
 
+## Persistent Data
+
+The SQLite database lives at `data/helpdesk.sqlite` and persists on disk.
+On Railway/Render free tier, the filesystem resets on redeploy — for
+permanent storage, mount a volume or swap SQLite for PostgreSQL
+(change `sqlite3.connect(DB_PATH)` to use `psycopg2` + `DATABASE_URL`).

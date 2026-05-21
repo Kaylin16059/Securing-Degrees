@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Categories{% endblock %}
+{% block content %}
+
+<div class="two-column">
+
+  <!-- CATEGORY LIST -->
+  <div class="panel">
+    <h2>All Categories</h2>
+    {% set color_map = {'cyan':'#00B4C8','magenta':'#E0007A','yellow':'#F5C800'} %}
+    {% for cat in categories %}
+    <div class="cat-row">
+      <span class="cat-swatch" style="background:{{ color_map.get(cat['color'],'#00B4C8') }}"></span>
+      <span style="font-weight:700;font-size:15px;flex:1">{{ cat['name'] }}</span>
+      <span class="badge {{ 'badge-open' if cat['ticket_count'] > 0 else 'badge-closed' }}">
+        {{ cat['ticket_count'] }} ticket{% if cat['ticket_count'] != 1 %}s{% endif %}
+      </span>
+      <a href="{{ url_for('index') }}?category={{ cat['id'] }}" class="btn btn-ghost btn-sm">View</a>
+      <form method="POST" action="{{ url_for('delete_category', cat_id=cat['id']) }}"
+            onsubmit="return confirm('Delete this category? Tickets will be uncategorised.')">
+        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+      </form>
+    </div>
+    {% else %}
+    <p style="color:var(--text-dim);font-size:14px">No categories yet. Add one →</p>
+    {% endfor %}
+  </div>
+
+  <!-- ADD CATEGORY -->
+  <div class="panel">
+    <h2>Add Category</h2>
+    <form method="POST" action="{{ url_for('new_category') }}" class="stack-form">
+      <div class="form-group">
+        <label>Category Name</label>
+        <input type="text" name="name" placeholder="e.g. Network, HR, Facilities" required>
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <select name="color">
+          <option value="cyan">Cyan</option>
+          <option value="magenta">Magenta</option>
+          <option value="yellow">Yellow</option>
+        </select>
+      </div>
+      <button type="submit">Add Category</button>
+    </form>
+  </div>
+
+</div>
+
+{% endblock %}

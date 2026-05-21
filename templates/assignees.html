@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Assignees{% endblock %}
+{% block content %}
+
+<div class="two-column">
+
+  <!-- ASSIGNEE LIST -->
+  <div class="panel">
+    <h2>All Assignees</h2>
+    {% for a in assignees %}
+    <div class="cat-row">
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--cyan-light);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--cyan-dim);flex-shrink:0">
+        {{ a['name'][0].upper() }}
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:15px;color:var(--navy)">{{ a['name'] }}</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:2px">
+          {{ a['ticket_count'] }} ticket{% if a['ticket_count'] != 1 %}s{% endif %} assigned
+        </div>
+      </div>
+      <a href="{{ url_for('index') }}?assignee_filter={{ a['name']|urlencode }}"
+         class="btn btn-ghost btn-sm">View Tickets</a>
+      <form method="POST" action="{{ url_for('delete_assignee', assignee_id=a['id']) }}"
+            onsubmit="return confirm('Delete {{ a['name'] }}? Their {{ a['ticket_count'] }} ticket{% if a['ticket_count'] != 1 %}s{% endif %} will be set to Unassigned.')">
+        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+      </form>
+    </div>
+    {% else %}
+    <p style="color:var(--text-dim);font-size:14px">No assignees yet. Add one →</p>
+    {% endfor %}
+
+    <!-- UNASSIGNED ROW — informational only -->
+    <div class="cat-row" style="opacity:0.5">
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--text-dim);flex-shrink:0">
+        ?
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:15px;color:var(--text-mid)">Unassigned</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:2px">Default — cannot be deleted</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD ASSIGNEE -->
+  <div>
+    <div class="panel">
+      <h2>Add Assignee</h2>
+      <form method="POST" action="{{ url_for('new_assignee') }}" class="stack-form">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" name="name" placeholder="e.g. Jordan M." required>
+        </div>
+        <button type="submit">Add Assignee</button>
+      </form>
+    </div>
+
+    <div class="panel" style="margin-top:0">
+      <h2>About Assignees</h2>
+      <p style="font-size:14px;color:var(--text-mid);line-height:1.7">
+        Assignees appear as dropdown options when creating or editing tickets.
+        Deleting an assignee sets all their tickets to <strong>Unassigned</strong> — no ticket data is lost.
+      </p>
+      <p style="font-size:14px;color:var(--text-mid);line-height:1.7;margin-top:10px">
+        New names typed into the assignee field on a ticket form are automatically added here.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

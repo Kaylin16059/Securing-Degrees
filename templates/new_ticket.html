@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}New Ticket{% endblock %}
+{% block content %}
+
+<a href="{{ url_for('index') }}" class="back-link">← Back to Tickets</a>
+
+<div class="panel form-lg" style="max-width:760px">
+  <h2>New Ticket</h2>
+  <form method="POST" class="stack-form">
+    <div class="form-group">
+      <label>Subject *</label>
+      <input type="text" name="subject" placeholder="Brief description of the issue" required>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea name="description" placeholder="Detailed description of the issue, steps to reproduce, or any relevant context…"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <select name="category_id">
+          <option value="">— None —</option>
+          {% for cat in categories %}
+          <option value="{{ cat['id'] }}">{{ cat['name'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Priority</label>
+        <select name="priority">
+          <option value="High">High</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Assignee</label>
+        <select name="assignee">
+          <option value="Unassigned">— Unassigned —</option>
+          {% for a in assignees %}
+          <option value="{{ a['name'] }}">{{ a['name'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status">
+          <option value="Open" selected>Open</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Resolved">Resolved</option>
+          <option value="Closed">Closed</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:8px">
+      <button type="submit" style="padding:13px 28px;font-size:15px">Create Ticket</button>
+      <a href="{{ url_for('index') }}" class="btn btn-ghost" style="padding:13px 20px;font-size:15px">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

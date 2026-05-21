@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Edit #{{ '%03d'|format(ticket['id']) }}{% endblock %}
+{% block content %}
+
+<a href="{{ url_for('ticket_detail', ticket_id=ticket['id']) }}" class="back-link">← Back to Ticket</a>
+
+<div class="panel" style="max-width:720px">
+  <h2>Edit Ticket #{{ '%03d'|format(ticket['id']) }}</h2>
+  <form method="POST" class="stack-form">
+    <div class="form-group">
+      <label>Subject *</label>
+      <input type="text" name="subject" value="{{ ticket['subject'] }}" required>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea name="description">{{ ticket['description'] or '' }}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <select name="category_id">
+          <option value="">— None —</option>
+          {% for cat in categories %}
+          <option value="{{ cat['id'] }}" {% if ticket['category_id'] == cat['id'] %}selected{% endif %}>{{ cat['name'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Priority</label>
+        <select name="priority">
+          {% for p in ['High','Medium','Low'] %}
+          <option value="{{ p }}" {% if ticket['priority'] == p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Assignee</label>
+        <select name="assignee">
+          <option value="Unassigned">— Unassigned —</option>
+          {% for a in assignees %}
+          <option value="{{ a['name'] }}" {% if ticket['assignee'] == a['name'] %}selected{% endif %}>{{ a['name'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status">
+          {% for s in ['Open','In Progress','Resolved','Closed'] %}
+          <option value="{{ s }}" {% if ticket['status'] == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button type="submit">Save Changes</button>
+      <a href="{{ url_for('ticket_detail', ticket_id=ticket['id']) }}" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

@@ -1,187 +1,134 @@
 {% extends "base.html" %}
+{% block title %}All Tickets{% endblock %}
 {% block content %}
 
 <!-- STAT CARDS -->
 <section class="cards">
   <div class="card">
     <h2>{{ total }}</h2>
-    <p>Total Charter Schools</p>
+    <p>Total Tickets</p>
   </div>
-  {% for row in by_state %}
-  <div class="card teal">
-    <h2>{{ row["count"] }}</h2>
-    <p>{{ row["state"] }} Schools</p>
+  {% for row in status_counts %}
+  {% set color = {'Open':'cyan','In Progress':'yellow','Resolved':'navy','Closed':''}  %}
+  <div class="card {{ color.get(row['status'], '') }}">
+    <h2>{{ row['cnt'] }}</h2>
+    <p>{{ row['status'] }}</p>
   </div>
   {% endfor %}
-  <div class="card" style="border-color:{% if selected_no_contacts %}var(--teal){% else %}var(--border){% endif %}">
-    <a href="{% if selected_no_contacts %}{{ url_for('index') }}{% else %}/?no_contacts=1{% endif %}" style="text-decoration:none">
-      <h2 style="color:{% if selected_no_contacts %}var(--teal){% else %}var(--gold){% endif %}">{{ no_contacts_total }}</h2>
-      <p>{% if selected_no_contacts %}<strong style="color:var(--teal)">● Filtering: </strong>{% endif %}Missing Contacts</p>
-    </a>
-  </div>
 </section>
 
 <!-- PIPELINE STRIP -->
 <div class="pipeline-strip">
-  {% for s in stages %}
-  {% set colors = {
-    "Prospecting": "#94a3b8",
-    "Contacted": "#2563eb",
-    "Meeting Set": "#0d9488",
-    "Follow Up": "#d97706",
-    "Partnered": "#16a34a",
-    "Not Interested": "#dc2626"
+  {% set stage_colors = {
+    'Open':        '#00B4C8',
+    'In Progress': '#F5C800',
+    'Resolved':    '#16a34a',
+    'Closed':      '#888888'
   } %}
+  {% for row in status_counts %}
   <div class="pip-stat">
-    <div class="pip-dot" style="background:{{ colors.get(s['pipeline_stage'], '#888') }}"></div>
-    <strong>{{ s["pipeline_stage"] }}</strong>
-    <span style="color:var(--text-dim)">{{ s["count"] }}</span>
+    <div class="pip-dot" style="background:{{ stage_colors.get(row['status'], '#888') }}"></div>
+    <strong>{{ row['status'] }}</strong>
+    <span style="color:var(--text-dim)">{{ row['cnt'] }}</span>
   </div>
   {% endfor %}
 </div>
 
 <!-- FILTERS -->
 <div class="panel">
-  <h2>Search & Filter</h2>
+  <h2>Search &amp; Filter</h2>
   <form method="GET" class="filter-form">
-    <input type="text" name="search" placeholder="Search school, district, or city…" value="{{ search }}" style="min-width:260px;flex:2">
-
-    <select name="state">
-      <option value="">All States</option>
-      {% for row in states %}
-      <option value="{{ row['state'] }}" {% if selected_state == row['state'] %}selected{% endif %}>{{ row["state"] }}</option>
+    <input type="text" name="search" placeholder="Search subject, description, or assignee…"
+           value="{{ search }}" style="min-width:260px;flex:2">
+    <select name="status">
+      <option value="">All Statuses</option>
+      {% for s in ['Open','In Progress','Resolved','Closed'] %}
+      <option value="{{ s }}" {% if selected_status == s %}selected{% endif %}>{{ s }}</option>
       {% endfor %}
     </select>
-
-    <select name="level">
-      <option value="">All Levels</option>
-      {% for row in levels %}
-      <option value="{{ row['level'] }}" {% if selected_level == row['level'] %}selected{% endif %}>{{ row["level"] }}</option>
-      {% endfor %}
-    </select>
-
-    <select name="stage">
-      <option value="">All Pipeline Stages</option>
-      {% for row in pipeline_stages %}
-      <option value="{{ row['pipeline_stage'] }}" {% if selected_stage == row['pipeline_stage'] %}selected{% endif %}>{{ row["pipeline_stage"] }}</option>
-      {% endfor %}
-    </select>
-
     <select name="priority">
       <option value="">All Priorities</option>
-      <option value="High" {% if selected_priority == "High" %}selected{% endif %}>High Priority</option>
-      <option value="Medium" {% if selected_priority == "Medium" %}selected{% endif %}>Medium Priority</option>
-      <option value="Low" {% if selected_priority == "Low" %}selected{% endif %}>Low Priority</option>
+      {% for p in ['High','Medium','Low'] %}
+      <option value="{{ p }}" {% if selected_priority == p %}selected{% endif %}>{{ p }}</option>
+      {% endfor %}
     </select>
-
-    <select name="enrollment">
-      <option value="">All Enrollment Sizes</option>
-      <option value="small"   {% if selected_enrollment == "small"   %}selected{% endif %}>Small (under 100)</option>
-      <option value="medium"  {% if selected_enrollment == "medium"  %}selected{% endif %}>Medium (100–299)</option>
-      <option value="large"   {% if selected_enrollment == "large"   %}selected{% endif %}>Large (300–599)</option>
-      <option value="xlarge"  {% if selected_enrollment == "xlarge"  %}selected{% endif %}>X-Large (600–999)</option>
-      <option value="xxlarge" {% if selected_enrollment == "xxlarge" %}selected{% endif %}>XX-Large (1,000+)</option>
-      <option value="unknown" {% if selected_enrollment == "unknown" %}selected{% endif %}>Enrollment Unknown</option>
+    <select name="category">
+      <option value="">All Categories</option>
+      {% for cat in categories %}
+      <option value="{{ cat['id'] }}" {% if selected_category == cat['id']|string %}selected{% endif %}>{{ cat['name'] }}</option>
+      {% endfor %}
     </select>
-
-    <button type="submit">Apply</button>
-    <a class="clear-link" href="{{ url_for('index') }}">Clear</a>
+    <select name="assignee_filter">
+      <option value="">All Assignees</option>
+      {% for a in assignees %}
+      <option value="{{ a['name'] }}" {% if selected_assignee == a['name'] %}selected{% endif %}>{{ a['name'] }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filter</button>
+    {% if search or selected_status or selected_priority or selected_category %}
+    <a href="{{ url_for('index') }}" class="clear-link">✕ Clear</a>
+    {% endif %}
   </form>
 </div>
 
-<!-- SCHOOL TABLE -->
-<form method="POST" action="/bulk_update" id="bulk-form">
-  <input type="hidden" name="return_qs" value="{{ query_string }}&page={{ page }}">
-  {% if selected_no_contacts %}<input type="hidden" name="no_contacts" value="1">{% endif %}
-
+<!-- TICKET TABLE -->
 <div class="panel">
-  <h2>Schools</h2>
-
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
-    <p class="result-count" style="margin:0">
-      Showing {{ schools|length }} of {{ filtered_total }} results
-      {% if filtered_total != total %} (filtered from {{ total }} total){% endif %}
-    </p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <a class="btn btn-teal" href="/export?{{ query_string }}" style="font-size:13px;padding:8px 16px">↓ Export {{ filtered_total }} to CSV</a>
-    </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <h2 style="margin-bottom:0">Tickets</h2>
+    <a href="{{ url_for('export_tickets', search=search, status=selected_status, priority=selected_priority, category=selected_category, assignee_filter=selected_assignee) }}"
+       class="export-btn">⬇ Export CSV</a>
   </div>
-
-  <!-- BULK ACTION BAR -->
-  <div class="bulk-bar" id="bulk-bar">
-    <span class="bulk-count" id="bulk-count">0 selected</span>
-    <select name="bulk_stage" id="bulk-stage">
-      <option value="">— Set Stage —</option>
-      {% for s in ["Prospecting","Contacted","Meeting Set","Follow Up","Partnered","Not Interested"] %}
-      <option value="{{ s }}">{{ s }}</option>
-      {% endfor %}
-    </select>
-    <select name="bulk_priority" id="bulk-priority">
-      <option value="">— Set Priority —</option>
-      <option value="High">High</option>
-      <option value="Medium">Medium</option>
-      <option value="Low">Low</option>
-    </select>
-    <button type="submit" class="btn" id="bulk-apply" disabled>Apply to Selected</button>
-    <button type="button" class="btn btn-ghost" onclick="clearAll()">Clear</button>
-  </div>
-
+  <p class="result-count">
+    Showing {{ tickets|length }} of {{ filtered_total }} ticket{% if filtered_total != 1 %}s{% endif %}
+    {% if search or selected_status or selected_priority or selected_category %}
+    (filtered from {{ total }} total)
+    {% endif %}
+  </p>
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          <th style="width:36px"><input type="checkbox" id="select-all" title="Select all on this page"></th>
-          <th>Rank</th>
-          <th>School</th>
-          <th>State</th>
-          <th>City</th>
-          <th>Level</th>
-          <th>Enrollment</th>
-          <th>Score</th>
-          <th>Stage</th>
+          <th>ID</th>
+          <th>Subject</th>
+          <th>Category</th>
           <th>Priority</th>
-          <th>Contacts</th>
+          <th>Status</th>
+          <th>Assignee</th>
+          <th>Created</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
-        {% for school in schools %}
-        {% set stage_class = {
-          "Prospecting": "badge-prospecting",
-          "Contacted": "badge-contacted",
-          "Meeting Set": "badge-meeting",
-          "Follow Up": "badge-followup",
-          "Partnered": "badge-partnered",
-          "Not Interested": "badge-notinterested"
-        }.get(school["pipeline_stage"], "badge-default") %}
-        {% set pri_class = {
-          "High": "badge-high",
-          "Medium": "badge-medium",
-          "Low": "badge-low"
-        }.get(school["priority"], "badge-default") %}
-        <tr class="school-row">
-          <td><input type="checkbox" name="school_ids" value="{{ school['id'] }}" class="row-cb"></td>
-          <td style="color:var(--text-dim);font-size:13px">{{ school["rank"] or "—" }}</td>
-          <td>
-            <a href="{{ url_for('school_detail', school_id=school['id']) }}">{{ school["school_name"] }}</a>
-            <div class="subtext">{{ school["district_name"] }}</div>
+        {% for t in tickets %}
+        <tr>
+          <td style="font-weight:700;color:var(--cyan-dim);white-space:nowrap">
+            <a href="{{ url_for('ticket_detail', ticket_id=t['id']) }}">#{{ '%03d'|format(t['id']) }}</a>
           </td>
-          <td>{{ school["state"] }}</td>
-          <td>{{ school["city"] }}</td>
-          <td>{{ school["level"] or "—" }}</td>
-          <td>{{ school["enrollment"] or "—" }}</td>
           <td>
-            {% if school["priority_score"] %}
-            <div class="score-bar-wrap">
-              <div class="score-bar"><div class="score-fill" style="width:{{ school['priority_score'] }}%"></div></div>
-              <span style="font-size:13px">{{ school["priority_score"] }}</span>
-            </div>
-            {% else %}—{% endif %}
+            <a href="{{ url_for('ticket_detail', ticket_id=t['id']) }}">{{ t['subject'] }}</a>
           </td>
-          <td><span class="badge {{ stage_class }}">{{ school["pipeline_stage"] or "—" }}</span></td>
-          <td><span class="badge {{ pri_class }}">{{ school["priority"] or "—" }}</span></td>
           <td>
-            {% set has_c = school["id"] %}
-            <a href="{{ url_for('school_detail', school_id=school['id']) }}" style="font-size:12px;color:var(--teal);text-decoration:none">View →</a>
+            {% if t['cat_name'] %}
+            <span class="cat-badge {{ t['cat_color'] }}">{{ t['cat_name'] }}</span>
+            {% else %}
+            <span style="color:var(--text-dim)">—</span>
+            {% endif %}
+          </td>
+          <td><span class="badge {{ priority_badge(t['priority']) }}">{{ t['priority'] }}</span></td>
+          <td><span class="badge {{ status_badge(t['status']) }}">{{ t['status'] }}</span></td>
+          <td>{{ t['assignee'] or '—' }}</td>
+          <td style="color:var(--text-dim);white-space:nowrap">{{ t['created_at'][:10] }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('delete_ticket', ticket_id=t['id']) }}"
+                  onsubmit="return confirm('Delete ticket #{{ '%03d'|format(t['id']) }}?')">
+              <button type="submit" class="btn btn-danger btn-sm" style="padding:4px 10px;font-size:11px">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align:center;padding:32px;color:var(--text-dim)">
+            No tickets found. <a href="{{ url_for('new_ticket') }}">Create one?</a>
           </td>
         </tr>
         {% endfor %}
@@ -194,65 +141,25 @@
   <div class="pagination">
     {% if page > 1 %}
     <a href="?{{ query_string }}&page={{ page - 1 }}">← Prev</a>
-    {% else %}<span class="disabled">← Prev</span>{% endif %}
-
+    {% else %}
+    <span class="disabled">← Prev</span>
+    {% endif %}
     {% for p in range(1, total_pages + 1) %}
-      {% if p == page %}<span class="current">{{ p }}</span>
-      {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+      {% if p == page %}
+      <span class="current">{{ p }}</span>
+      {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
       <a href="?{{ query_string }}&page={{ p }}">{{ p }}</a>
-      {% elif p == 4 or p == total_pages - 3 %}<span>…</span>
+      {% elif p == 2 or p == total_pages - 1 %}
+      <span class="disabled">…</span>
       {% endif %}
     {% endfor %}
-
     {% if page < total_pages %}
     <a href="?{{ query_string }}&page={{ page + 1 }}">Next →</a>
-    {% else %}<span class="disabled">Next →</span>{% endif %}
+    {% else %}
+    <span class="disabled">Next →</span>
+    {% endif %}
   </div>
   {% endif %}
-
 </div>
-</form>
-
-<script>
-const cbs = () => document.querySelectorAll('.row-cb');
-const bulkBar = document.getElementById('bulk-bar');
-const bulkCount = document.getElementById('bulk-count');
-const bulkApply = document.getElementById('bulk-apply');
-const selectAll = document.getElementById('select-all');
-
-function updateBulk() {
-  const checked = [...cbs()].filter(c => c.checked);
-  const n = checked.length;
-  bulkCount.textContent = n + ' selected';
-  bulkBar.classList.toggle('active', n > 0);
-  bulkApply.disabled = n === 0;
-  selectAll.indeterminate = n > 0 && n < cbs().length;
-  selectAll.checked = n === cbs().length && n > 0;
-  // Highlight rows
-  cbs().forEach(cb => cb.closest('tr').classList.toggle('selected', cb.checked));
-}
-
-function clearAll() {
-  cbs().forEach(cb => cb.checked = false);
-  selectAll.checked = false;
-  document.getElementById('bulk-stage').value = '';
-  document.getElementById('bulk-priority').value = '';
-  updateBulk();
-}
-
-selectAll.addEventListener('change', () => {
-  cbs().forEach(cb => cb.checked = selectAll.checked);
-  updateBulk();
-});
-cbs().forEach(cb => cb.addEventListener('change', updateBulk));
-
-document.getElementById('bulk-form').addEventListener('submit', function(e) {
-  const stage = document.getElementById('bulk-stage').value;
-  const priority = document.getElementById('bulk-priority').value;
-  const n = [...cbs()].filter(c => c.checked).length;
-  if (!stage && !priority) { e.preventDefault(); alert('Please select a stage or priority to apply.'); return; }
-  if (!confirm(`Update ${n} school${n>1?'s':''} to ${[stage,priority].filter(Boolean).join(' / ')}?`)) e.preventDefault();
-});
-</script>
 
 {% endblock %}
