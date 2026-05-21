@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a class="back-link" href="{{ url_for('index') }}">← Back to Dashboard</a>
+
+<div class="panel">
+  <h2>Import Contacts</h2>
+  <p style="color:var(--text-dim);margin-bottom:20px">
+    Upload a CSV with updated contact info. The file needs at minimum a <code style="background:var(--dark3);padding:2px 6px;border-radius:4px">school_name</code> column.
+    Other columns are matched automatically — it handles <code style="background:var(--dark3);padding:2px 6px;border-radius:4px">contact_name</code>, <code style="background:var(--dark3);padding:2px 6px;border-radius:4px">role</code>,
+    <code style="background:var(--dark3);padding:2px 6px;border-radius:4px">email</code>, <code style="background:var(--dark3);padding:2px 6px;border-radius:4px">phone</code>, <code style="background:var(--dark3);padding:2px 6px;border-radius:4px">notes</code>.
+    Duplicate emails are updated rather than duplicated.
+  </p>
+
+  <form method="POST" enctype="multipart/form-data" class="stack-form" style="max-width:480px">
+    <div>
+      <label>CSV File</label>
+      <input type="file" name="contact_file" accept=".csv" required style="padding:10px">
+    </div>
+    <button type="submit">Upload & Import</button>
+  </form>
+</div>
+
+{% if result %}
+
+  {% if result.error %}
+  <div class="panel" style="border-color:#fca5a5">
+    <h2 style="color:#f87171">Import Error</h2>
+    <p style="color:#f87171">{{ result.error }}</p>
+  </div>
+
+  {% else %}
+  <div class="panel" style="border-color:#86efac">
+    <h2 style="color:#4ade80">Import Complete</h2>
+    <div class="cards" style="margin-top:14px;margin-bottom:0">
+      <div class="card">
+        <h2 style="color:#4ade80">{{ result.inserted }}</h2>
+        <p>New contacts added</p>
+      </div>
+      <div class="card">
+        <h2 style="color:#60a5fa">{{ result.updated }}</h2>
+        <p>Existing contacts updated</p>
+      </div>
+      <div class="card">
+        <h2 style="color:var(--text-dim)">{{ result.skipped }}</h2>
+        <p>Rows skipped</p>
+      </div>
+      <div class="card">
+        <h2>{{ result.total }}</h2>
+        <p>Total rows processed</p>
+      </div>
+    </div>
+
+    {% if result.unmatched %}
+    <div style="margin-top:20px">
+      <p style="color:#fbbf24;font-weight:700;margin-bottom:8px">
+        ⚠ {{ result.unmatched|length }} school name(s) couldn't be matched
+        {% if result.unmatched|length == 20 %} (showing first 20){% endif %}:
+      </p>
+      <div style="background:var(--dark3);border-radius:8px;padding:12px;font-size:13px;color:var(--text-dim)">
+        {% for name in result.unmatched %}
+        <div style="padding:3px 0;border-bottom:1px solid var(--border)">{{ name }}</div>
+        {% endfor %}
+      </div>
+      <p class="small-note" style="margin-top:8px">These school names didn't match anything in the database. Check spelling or add them manually.</p>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endif %}
+
+{% endif %}
+
+{% endblock %}
